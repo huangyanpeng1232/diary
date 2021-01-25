@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no">
+    <title>日记</title>
+
+    <link rel="stylesheet" href="/bootstrap4/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/font-awesome/css/font-awesome.min.css">
+
+    <script src="/js/jquery-3.2.1.min.js"></script>
+    <script src="/bootstrap4/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <style>
+        body,html{
+            background-color: #F4F5F9;
+        }
+        .diaryUl {
+            padding-left: 0px;
+        }
+
+        .diaryUl li {
+            list-style: none;
+            margin: 10px;
+            padding: 8px;
+            padding-bottom: 2px;
+            border: 1px solid rgba(0,0,0,0.2);
+            border-radius: 2px;
+        }
+
+        .diaryContent {
+            font-size: 17px;
+            color: #333;
+        }
+        .diaryInfo{
+            margin-top: 8px;
+        }
+        .diaryInfo span{
+            margin-left: 3px;
+            margin-right: 3px;
+        }
+        .delDiary,.emailRemind{
+            background-color: rgba(0,0,0,0.3);
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-size: 12px;
+            color: #fff;
+            cursor: pointer;
+        }
+        .affirmRemind{
+            background-color: rgba(0,0,0,0.3);
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-size: 12px;
+            color: #fff;
+        }
+        .addDiaryBtn{
+            position: fixed;
+            bottom: 30px;
+            right: 20px;
+            padding: 10px;
+            width: 45px;
+            height: 45px;
+            text-align: center;
+            font-size: 33px;
+            color: #fff;
+            line-height: 25px;
+            background: url("/index/img/addbtn.jpg");
+            background-size: 110%;
+            border-radius: 50%;
+        }
+        .addDiary{
+            position: fixed;
+            width: 100%;
+            bottom: 0px;
+            display: none;
+            background-color: #fff;
+            border-radius: 10px 10px 0px 0px;
+            height: 250px;
+            z-index: 10;
+            padding: 15px;
+        }
+        .diaryInput{
+            resize: none;
+            padding: 8px;
+            font-size: 18px;
+        }
+        .colors{
+            width: 100%;
+            height: 20px;
+        }
+        .colors tr td div{
+            list-style: none;
+            border-radius: 2px;
+            margin: 10px auto;
+            height: 20px;
+            width: 20px;
+        }
+        .colorSelect{
+            border: 2px solid #999;
+        }
+        .addDiaryOk{
+            margin-top: 10px;
+        }
+        .affirmRemind{
+            cursor: pointer;
+        }
+        .updateTime{
+            color: #333;
+            font-size: 12px;
+        }
+        .loadMore{
+            text-align: center;
+            color: #ccc;
+            font-size: 12px;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            cursor: pointer;
+        }
+        .loadMore span:hover{
+            color: #444;
+        }
+    </style>
+</head>
+<body>
+<div id="app" class="col-12 col-sm-10 offset-sm-1 col-md-6 offset-md-3 col-lg-4 offset-lg-4">
+    <div class="col-12 diaryArray">
+        <ul class="diaryUl">
+            <li v-for="(diary,i) in diaryArray" :style="{'background-color':diary.color}">
+                <div class="diaryContent">
+                    {{diary.content}}
+                </div>
+                <div class="diaryInfo">
+                    <span class="updateTime">{{diary.updateTime | formatDate}}</span>
+                    <span @click="delDiary(diary)" class="delDiary" style="float: right"><i class="fa fa-trash-o" style="color: #fff" aria-hidden="true"></i></span>
+                    <span @click="affirmRemind(diary)" class="affirmRemind" style="float: right" v-if="diary.remind == 1 && diary.remindTime != null"><i class="fa fa-bell-o" style="color: #ffbb3e" aria-hidden="true"></i> {{diary.remindTime | formatDate}}</span>
+                    <span class="emailRemind" style="float: right" v-if="diary.remind == 1 && diary.remindTime != null">
+                        <input type="checkbox" @change="emailRemind(diary)" style="position: relative; top: 2px;" :checked="diary.emailRemind == 'Y'">
+                        <span >email</span>
+                    </span>
+                </div>
+            </li>
+        </ul>
+        <div class="loadMore">
+            <span onclick="loadDiary()">加载更多...</span>
+        </div>
+    </div>
+    <div class="col-12 addDiary">
+        <textarea class="form-control diaryInput"></textarea>
+        <table class="colors">
+            <tr>
+                <td><div style="background-color: #9dfff1"></div></td>
+                <td><div style="background-color: #e6d0ff"></div></td>
+                <td><div style="background-color: #ffc2e6"></div></td>
+                <td><div style="background-color: #b0e6ff"></div></td>
+                <td><div class="colorSelect" style="background-color: #d2ffcf"></div></td>
+                <td><div style="background-color: #ffffc2"></div></td>
+            </tr>
+        </table>
+
+        <input type="datetime-local" class="form-control remindTime" placeholder="设置提醒">
+        <div>
+            <input type="button" style="float:right;" class="btn btn-info addDiaryOk" value="添加">
+        </div>
+    </div>
+    <div class="addDiaryBtn">+</div>
+</div>
+</body>
+<script>
+
+    let index = 1;
+
+    padDate = (value) => {
+        return value < 10 ? '0' + value : value;
+    }
+
+    let loadIng = false;
+
+    function loadDiary() {
+        if(index == -1 || loadIng){
+            return;
+        }
+        loadIng = true;
+        $.post('/loadDiary', {'index': index}, function (diaryList) {
+            diaryList = eval(diaryList);
+            $.each(diaryList, function (i, val) {
+                app.diaryArray.push(val)
+            });
+            if(diaryList.length == 10){
+                index++;
+            }else{
+                index = -1;
+            }
+            loadIng = false;
+        })
+    }
+
+    var app = new Vue({
+        el: '#app',
+        data: {
+            diaryArray: []
+        },
+        methods:{
+            affirmRemind:function(diary){
+                $.post('/affirmRemind',{'id':diary.id},function(){
+                    app.reloadData();
+                })
+            },
+            delDiary:function(diary){
+                $.post('/delDiary',{'id':diary.id},function(){
+                    app.reloadData();
+                })
+            },
+            reloadData:function(){
+                app.diaryArray.length = 0;
+                index = 1;
+                loadDiary();
+            },
+            emailRemind:function(diary){
+                if(diary.emailRemind == 'Y'){
+                    diary.emailRemind = 'N';
+                }else{
+                    diary.emailRemind = 'Y';
+                }
+
+                $.post('/updateEmailRemind',{'id':diary.id,'emailRemind':diary.emailRemind})
+            }
+        },
+        filters: {
+            formatDate: function (value) {  //这里的 value 就是需要过滤的数据
+                if(value == undefined){
+                    return '';
+                }
+                var date = new Date(value);
+                var year = date.getFullYear();
+                var month = padDate(date.getMonth() + 1);
+                var day = padDate(date.getDate());
+                var hours = padDate(date.getHours());
+                var minutes = padDate(date.getMinutes());
+                var seconds = padDate(date.getSeconds());
+                return month + '-' + day + ' ' + hours + ':' + minutes;
+            }
+        }
+
+    })
+
+    $(function () {
+        loadDiary();
+        $('.colors tr td div').click(function(){
+            $('.colorSelect').removeClass('colorSelect');
+            $(this).addClass('colorSelect');
+        })
+        $('.addDiaryBtn').click(function (){
+            $('.diaryInput').val('')
+            $('.remindTime').val('')
+            $('.addDiary').show(200);
+        })
+        $('.addDiaryOk').click(function (){
+            let obj = {
+                content:$('.diaryInput').val(),
+                updateTime:new Date(),
+                remind:$('.remindTime').val() != ''?1:0,
+                remindTime:$('.remindTime').val(),
+                color:$('.colorSelect').css('background-color'),
+            }
+
+            $('.addDiary').hide(200);
+
+            if(obj.content == ''){
+                return;
+            }
+
+            $.post('/save',JSON.stringify(obj),function(){
+                app.reloadData();
+            });
+        })
+        $('.diaryArray').click(function (){
+            $('.addDiary').hide(200);
+        })
+    })
+
+    $(document).scroll(function() {
+        var scroH = $(document).scrollTop();
+        var viewH = $(window).height();
+        var contentH = $(document).height();
+        if (contentH - (scroH + viewH) <= 150){
+            loadDiary();
+        }
+    });
+</script>
+</html>
