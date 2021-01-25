@@ -12,7 +12,7 @@ import java.util.List;
 @Mapper
 public interface DiaryDao extends BaseMapper<Diary> {
 
-    @Select("SELECT * FROM diary WHERE `status` = '1' ORDER BY top DESC, CASE WHEN (remind != 1) THEN 1 ELSE 0 END, updateTime DESC")
+    @Select("SELECT * FROM diary WHERE `status` = '1' ORDER BY top DESC, CASE WHEN (remind = 1 and TIMESTAMPDIFF(DAY, DATE_FORMAT(now(),'%Y-%m-%d'), remindTime) <= 0) THEN 0 ELSE 1 END, updateTime DESC")
     List<Diary> selectDiaryList();
 
     @Update("update diary set remind = '2' where id = #{id}")
@@ -23,4 +23,7 @@ public interface DiaryDao extends BaseMapper<Diary> {
 
     @Update("update diary set emailRemind = #{emailRemind} where id = #{id}")
     void updateEmailRemind(@Param("id") String id,@Param("emailRemind") String emailRemind);
+
+    @Select("SELECT * FROM diary WHERE `status` = '1' and remind = '1'")
+    List<Diary> selectSendEmailDiary();
 }
